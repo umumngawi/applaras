@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LARAS — Where Every Agenda Aligns</title>
+
+<!-- PWA -->
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#C9706A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="LARAS">
+<link rel="apple-touch-icon" href="https://lh3.googleusercontent.com/d/1m-DwSbsYNO1choM7qPm1XzsESIISRA0a">
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;1,600&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+<!-- Styles -->
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+
+<!-- LOADER -->
+<div class="ldr" id="ldr"><div class="ldr-spin"></div><div class="ldr-txt" id="ldr-txt">Memuat...</div></div>
+<div class="toast-wrap" id="toasts"></div>
+
+<!-- CONFIRM -->
+<div class="cfm" id="cfm">
+  <div class="cfm-box">
+    <div class="cfm-icon" id="cfm-ico">🌿</div>
+    <div class="cfm-title" id="cfm-ttl">Konfirmasi</div>
+    <div class="cfm-msg" id="cfm-msg"></div>
+    <div class="cfm-btns">
+      <button class="cb-cancel" id="cfm-cancel">Batal</button>
+      <button class="cb-ok" id="cfm-ok">Ya</button>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL POPUP -->
+<div class="dtl" id="dtl">
+  <div class="dtl-box">
+    <div class="dtl-drag"></div>
+    <div class="dtl-hdr">
+      <div class="dtl-bar" id="dtl-bar"></div>
+      <div class="dtl-titles">
+        <div class="dtl-staf" id="dtl-staf"></div>
+        <div class="dtl-name" id="dtl-name"></div>
+      </div>
+      <button class="dtl-close" id="dtl-close">&#x2715;</button>
+    </div>
+    <div class="dtl-sec">
+      <div class="dtl-row">
+        <div class="dtl-ico">📅</div>
+        <div><div class="dtl-lbl">Tanggal</div><div class="dtl-val" id="dtl-tgl"></div></div>
+      </div>
+      <div class="dtl-row" id="dtl-jam-row" style="display:none">
+        <div class="dtl-ico">🕐</div>
+        <div><div class="dtl-lbl">Jam</div><div class="dtl-val" id="dtl-jam"></div></div>
+      </div>
+      <div class="dtl-row" id="dtl-ket-row" style="display:none">
+        <div class="dtl-ico">📝</div>
+        <div><div class="dtl-lbl">Keterangan</div><div class="dtl-val" id="dtl-ket"></div></div>
+      </div>
+      <div id="dtl-kh-row"></div>
+      <div id="dtl-cat-row" style="display:none">
+        <div class="dtl-lbl">Catatan</div>
+        <div class="dtl-val" id="dtl-cat" style="font-style:italic;margin-top:2px;color:var(--text-mid)"></div>
+      </div>
+      <div id="dtl-disp-row" style="display:none">
+        <div class="dtl-lbl" id="dtl-disp-lbl"></div>
+        <div id="dtl-disp-names" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:4px"></div>
+      </div>
+      <div id="dtl-att-sec" style="display:none">
+        <div class="dtl-lbl" style="margin-bottom:8px">Lampiran</div>
+        <div id="dtl-att-list" style="display:flex;flex-direction:column;gap:6px"></div>
+      </div>
+    </div>
+    <button class="dtl-edit hidden" id="dtl-edit">✏️ Edit Agenda Ini</button>
+  </div>
+</div>
+
+<!-- LOGIN -->
+<div id="login">
+  <div class="login-box">
+    <div style="margin-bottom:6px;display:flex;justify-content:center">
+      <div class="login-logo">
+        <img src="https://lh3.googleusercontent.com/d/1m-DwSbsYNO1choM7qPm1XzsESIISRA0a" alt="LARAS"
+          onerror="this.style.display='none'">
+      </div>
+    </div>
+    <div class="login-brand">LARAS</div>
+    <div class="login-tag">Layanan Agenda, Rencana, Aktivitas, dan Sinkronisasi</div>
+    <div class="login-div"><span>Where Every Agenda Aligns</span></div>
+    <input class="inp" type="text" id="l-user" placeholder="Username" autocomplete="username" autocapitalize="none">
+    <input class="inp" type="password" id="l-pass" placeholder="Password" autocomplete="current-password">
+    <div class="login-err" id="l-err"></div>
+    <button class="login-btn" id="l-btn">Masuk</button>
+    <button class="login-back" id="l-back">&#x2190; Kembali ke halaman agenda</button>
+  </div>
+</div>
+
+<!-- VIEW-ONLY SHELL -->
+<div id="vo">
+  <div class="tb">
+    <div class="tb-brand">
+      <div class="tb-mark">
+        <img src="https://lh3.googleusercontent.com/d/1m-DwSbsYNO1choM7qPm1XzsESIISRA0a" alt="" onerror="this.style.display='none'">L
+      </div>
+      <div class="tb-info"><div class="tb-name">LARAS</div></div>
+    </div>
+    <div class="tb-search"><span class="si">🔍</span><input type="text" id="vo-srch" placeholder="Cari agenda..." oninput="debouncedRender()"></div>
+    <div class="tb-acts">
+      <button class="tb-btn login-t" id="btn-show-login">🔐 Login</button>
+    </div>
+  </div>
+  <div class="tabbar">
+    <button class="active" id="vo-t-nama" onclick="setTab('nama')">
+      <span class="t-ico">📋</span><span>Agenda</span><span class="t-desc">Semua jadwal</span>
+    </button>
+    <button id="vo-t-kal" onclick="setTab('kalender')">
+      <span class="t-ico">🗓</span><span>Kalender</span><span class="t-desc">Tampilan bulan</span>
+    </button>
+  </div>
+  <div class="main" id="vo-main"></div>
+</div>
+
+<!-- LOGGED-IN SHELL -->
+<div id="app">
+  <div class="tb">
+    <div class="tb-brand">
+      <div class="tb-mark">
+        <img src="https://lh3.googleusercontent.com/d/1m-DwSbsYNO1choM7qPm1XzsESIISRA0a" alt="" onerror="this.style.display='none'">L
+      </div>
+      <div class="tb-info">
+        <div class="tb-name">LARAS</div>
+        <div class="tb-user" id="user-welcome"></div>
+      </div>
+    </div>
+    <div class="tb-search"><span class="si">🔍</span><input type="text" id="srch" placeholder="Cari agenda..." oninput="debouncedRender()"></div>
+    <div class="tb-acts">
+      <button class="tb-btn" id="btn-notif" style="display:none">🔔<span id="bell-cnt"></span></button>
+      <button class="tb-btn add hidden" id="btn-add">＋ <span class="add-lbl">Tambah</span></button>
+      <button class="tb-btn" id="btn-logout" style="color:var(--text-soft)">Keluar</button>
+    </div>
+  </div>
+  <div class="tabbar">
+    <button class="active" id="t-nama" onclick="setTab('nama')">
+      <span class="t-ico">📋</span><span>Agenda</span><span class="t-desc">Semua jadwal</span>
+    </button>
+    <button id="t-kal" onclick="setTab('kalender')">
+      <span class="t-ico">🗓</span><span>Kalender</span><span class="t-desc">Tampilan bulan</span>
+    </button>
+    <button id="t-stg" onclick="setTab('settings')">
+      <span class="t-ico">👥</span><span>Daftar Nama</span><span class="t-desc">Pejabat &amp; staf</span>
+    </button>
+  </div>
+  <div class="main" id="app-main"></div>
+  <div class="notif-wrap" id="notif-wrap"></div>
+</div>
+
+<!-- MODAL TAMBAH/EDIT -->
+<div class="modal" id="modal">
+  <div class="modal-box">
+    <div class="modal-drag"></div>
+    <div class="modal-hdr"><span class="modal-hdr-leaf">🌿</span><h3 id="modal-title">Tambah Agenda</h3></div>
+    <div class="form-row">
+      <label>Nama Pejabat / Staf</label>
+      <div class="dd-wrap" id="dd1-wrap">
+        <button type="button" class="dd-trig" id="dd1-trig">
+          <span class="dd-txt ph" id="dd1-txt">Pilih nama...</span>
+          <span class="dd-arrow">&#x25BC;</span>
+        </button>
+        <div class="dd-panel" id="dd1-panel">
+          <div class="dd-srch-wrap"><span class="dd-srch-ico">🔍</span><input type="text" class="dd-srch" id="dd1-srch" placeholder="  Cari nama..."></div>
+          <div class="dd-list" id="dd1-list"></div>
+        </div>
+      </div>
+    </div>
+    <div class="form-row"><label>Judul Agenda</label><input type="text" id="f-title" placeholder="Rapat koordinasi, kunjungan kerja..."></div>
+    <div class="form-row"><label>Keterangan</label><textarea id="f-body" placeholder="Lokasi, agenda detail, catatan..."></textarea></div>
+    <div class="form-row">
+      <label>Status Kehadiran</label>
+      <div class="radio-grp">
+        <div class="radio-opt"><input type="radio" name="kh" id="r-hadir" value="Hadir" checked><label for="r-hadir">Hadir</label></div>
+        <div class="radio-opt"><input type="radio" name="kh" id="r-menugaskan" value="Menugaskan"><label for="r-menugaskan">Menugaskan</label></div>
+        <div class="radio-opt"><input type="radio" name="kh" id="r-mewakili" value="Mewakili"><label for="r-mewakili">Mewakili</label></div>
+      </div>
+    </div>
+    <div class="extra-flds" id="extra-flds">
+      <div class="form-row"><label>Catatan</label><textarea id="f-cat" placeholder="Catatan untuk yang ditugaskan/mewakili..."></textarea></div>
+      <div class="form-row">
+        <label>Disposisi</label>
+        <div class="dd-wrap" id="dd2-wrap">
+          <button type="button" class="dd-trig" id="dd2-trig">
+            <span class="dd-txt ph" id="dd2-txt">Pilih nama...</span>
+            <span class="dd-arrow">&#x25BC;</span>
+          </button>
+          <div class="dd-panel" id="dd2-panel">
+            <div class="dd-srch-wrap"><span class="dd-srch-ico">🔍</span><input type="text" class="dd-srch" id="dd2-srch" placeholder="  Cari nama..."></div>
+            <div class="dd-list" id="dd2-list"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="dt-row">
+        <div class="dt-col"><label>Tanggal Mulai</label><input type="date" id="f-ds"></div>
+        <div class="dt-col"><label>Tanggal Selesai</label><input type="date" id="f-de"></div>
+      </div>
+      <div class="form-hint">Kosongkan Tanggal Selesai jika agenda hanya satu hari.</div>
+    </div>
+    <div class="form-row">
+      <div class="tm-row">
+        <div class="tm-col"><label>Jam Mulai</label><input type="time" id="f-ts"></div>
+        <div class="tm-col"><label>Jam Selesai</label><input type="time" id="f-te"></div>
+      </div>
+      <div class="form-hint">Kosongkan Jam Selesai jika belum diketahui.</div>
+    </div>
+    <div class="form-row">
+      <label>Unggah Dokumen</label>
+      <div class="upload-area" id="upload-area" onclick="G('f-files').click()">
+        <div class="upload-ico">📎</div>
+        <div class="upload-hint">Klik atau <b>seret file ke sini</b><br>PDF, DOC, JPG, XLSX</div>
+        <input type="file" id="f-files" multiple accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xlsx,.xls" onchange="onFiles(this.files)">
+      </div>
+      <div class="upl-list" id="upl-list"></div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel" id="modal-cancel">Batal</button>
+      <button class="btn-save" id="modal-save">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- Script di bawah body agar DOM sudah siap -->
+<script src="./app.js"></script>
+</body>
+</html>
