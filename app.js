@@ -167,7 +167,7 @@ async function doLogin() {
     // Backup ke cookie (30 hari) — lebih persisten di PWA Android
     try {
       const exp = new Date(Date.now()+30*24*60*60*1000).toUTCString();
-      document.cookie=`${SESSION_KEY}=${encodeURIComponent(sessData)};expires=${exp};path=/applaras/;SameSite=Lax`;
+      document.cookie=`${SESSION_KEY}=${encodeURIComponent(sessData)};expires=${exp};path=/;SameSite=Lax`;
     } catch(e) {}
     applyRole();
     G('login').style.display='none'; G('vo').style.display='none'; G('app').style.display='flex';
@@ -205,7 +205,7 @@ function doLogout() {
   } catch(e) {}
   // Hapus cookie session juga
   try {
-    document.cookie=`${SESSION_KEY}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/applaras/;SameSite=Lax`;
+    document.cookie=`${SESSION_KEY}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;SameSite=Lax`;
   } catch(e) {}
   G('app').style.display='none';
   G('btn-add').classList.add('hidden');
