@@ -179,10 +179,11 @@ async function doLogin() {
 }
 
 function applyRole() {
-  const lbl = { owner:'Owner', admin:'Admin', viewonly:'View Only', staff:'Staff' };
-  // curRole 'staff' pakai class CSS 'viewonly' supaya warnanya netral
-  const badgeClass = curRole==='staff' ? 'viewonly' : curRole;
-  G('user-welcome').innerHTML=`${esc(curUser)}&nbsp;<span class="role-badge ${badgeClass}">${lbl[curRole]||curRole}</span>`;
+  const lbl = { owner:'Owner', admin:'Admin', viewonly:'View Only' };
+  // Staff tidak tampil badge role — cukup nama saja
+  const badge = (curRole==='staff'||!lbl[curRole])
+    ? '' : `&nbsp;<span class="role-badge ${curRole}">${lbl[curRole]}</span>`;
+  G('user-welcome').innerHTML=`${esc(curUser)}${badge}`;
   // owner & admin bisa tambah/edit agenda
   if (curRole==='owner'||curRole==='admin') {
     G('btn-add').classList.remove('hidden');
@@ -245,8 +246,6 @@ async function initVO() {
       mode='loggedin'; tab='nama';
       applyRole();
       initApp();
-      // DEBUG — hapus setelah konfirmasi nama sudah benar
-      setTimeout(()=>toast('Session: '+curNama+' ('+curRole+')'),1000);
       return;
     }
   } catch(e) {}
