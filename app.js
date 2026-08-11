@@ -241,10 +241,12 @@ async function initVO() {
       const sess = JSON.parse(saved);
       curUser=sess.nama||''; curRole=sess.role||'viewonly';
       curBag=sess.bagian||''; curNama=sess.nama_lengkap||sess.nama||'';
-      applyRole();
       G('login').style.display='none'; G('vo').style.display='none'; G('app').style.display='flex';
       mode='loggedin'; tab='nama';
+      applyRole();
       initApp();
+      // DEBUG — hapus setelah konfirmasi nama sudah benar
+      setTimeout(()=>toast('Session: '+curNama+' ('+curRole+')'),1000);
       return;
     }
   } catch(e) {}
