@@ -1,26 +1,16 @@
 /* ─────────────────────────────────────────────
-   LARAS — Service Worker
-   Strategi: cache-first untuk aset statis,
-   network-first untuk request ke GAS (API).
+   LARAS — Service Worker v2
+   Strategi: network-first untuk JS/HTML agar
+   selalu dapat versi terbaru, cache-first
+   hanya untuk font.
 ───────────────────────────────────────────── */
 
-const CACHE_NAME = 'laras-v1';
-const STATIC_ASSETS = [
-  './',
-  './index.html',
-  './style.css',
-  './app.js',
-  './manifest.json',
-  'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;1,600&family=Inter:wght@400;600;700&display=swap'
-];
+const CACHE_NAME = 'laras-v2';
 
-// ── INSTALL: cache semua aset statis ──
+// ── INSTALL ──
 self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(STATIC_ASSETS))
-      .then(() => self.skipWaiting())
-  );
+  // Langsung aktif tanpa tunggu tab lama ditutup
+  self.skipWaiting();
 });
 
 // ── ACTIVATE: hapus cache lama ──
@@ -34,12 +24,11 @@ self.addEventListener('activate', event => {
   );
 });
 
-// ── FETCH: strategi cerdas per jenis request ──
+// ── FETCH ──
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
 
-  // Request ke GAS → network-first (data harus fresh)
-  // Kalau offline, kembalikan response kosong yang aman
+  // GAS API → network only, fallback offline response
   if (url.hostname === 'script.google.com') {
     event.respondWith(
       fetch(event.request).catch(() =>
@@ -51,7 +40,7 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Request ke Google Fonts → cache-first
+  // Google Fonts → cache-first (jarang berubah)
   if (url.hostname.includes('fonts.g')) {
     event.respondWith(
       caches.match(event.request).then(cached =>
@@ -65,29 +54,29 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Request ke Google Drive (lampiran) → network only
+  // Google Drive / gambar → network only
   if (url.hostname.includes('drive.google') || url.hostname.includes('lh3.googleusercontent')) {
     event.respondWith(fetch(event.request));
     return;
   }
 
-  // Aset statis LARAS (HTML, CSS, JS) → cache-first, fallback network
+  // app.js, style.css, index.html → NETWORK-FIRST
+  // Selalu ambil versi terbaru dari server,
+  // cache hanya sebagai fallback kalau offline
   event.respondWith(
-    caches.match(event.request).then(cached => {
-      if (cached) return cached;
-      return fetch(event.request).then(res => {
-        // Simpan ke cache kalau berhasil
-        if (res && res.status === 200 && res.type !== 'opaque') {
-          const clone = res.clone();
-          caches.open(CACHE_NAME).then(c => c.put(event.request, clone));
-        }
-        return res;
-      });
-    }).catch(() => {
-      // Offline fallback untuk navigasi
-      if (event.request.mode === 'navigate') {
-        return caches.match('./index.html');
+    fetch(event.request).then(res => {
+      if (res && res.status === 200 && res.type !== 'opaque') {
+        const clone = res.clone();
+        caches.open(CACHE_NAME).then(c => c.put(event.request, clone));
       }
-    })
+      return res;
+    }).catch(() =>
+      // Offline: pakai cache
+      caches.match(event.request).then(cached =>
+        cached || (event.request.mode === 'navigate'
+          ? caches.match('./index.html')
+          : null)
+      )
+    )
   );
 });
