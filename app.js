@@ -91,7 +91,12 @@ function debouncedRender() {
 // ── GAS ──
 async function gas(payload) {
   try {
-    const r = await fetch(GAS, { method:'POST', body:JSON.stringify(payload) });
+    const r = await fetch(GAS, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      cache: 'no-store',
+      headers: { 'Content-Type': 'text/plain' }
+    });
     return await r.json();
   } catch(e) { return { success:false }; }
 }
