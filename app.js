@@ -161,11 +161,13 @@ async function doLogin() {
   btn.textContent='Masuk'; btn.disabled=false;
   if (res.success) {
     curUser=res.nama; curRole=res.role||'viewonly'; curBag=res.bagian||''; curNama=res.nama||'';
-    // Simpan session ke localStorage agar tidak logout saat app ditutup
+    const sessData = JSON.stringify({ nama:curUser, role:curRole, bagian:curBag, nama_lengkap:curNama });
+    // Simpan ke localStorage
+    try { localStorage.setItem(SESSION_KEY, sessData); } catch(e) {}
+    // Backup ke cookie (30 hari) — lebih persisten di PWA Android
     try {
-      localStorage.setItem(SESSION_KEY, JSON.stringify({
-        nama: curUser, role: curRole, bagian: curBag, nama_lengkap: curNama
-      }));
+      const exp = new Date(Date.now()+30*24*60*60*1000).toUTCString();
+      document.cookie=`${SESSION_KEY}=${encodeURIComponent(sessData)};expires=${exp};path=/applaras/;SameSite=Lax`;
     } catch(e) {}
     applyRole();
     G('login').style.display='none'; G('vo').style.display='none'; G('app').style.display='flex';
@@ -201,6 +203,10 @@ function doLogout() {
     localStorage.removeItem('lr_su');
     localStorage.removeItem('lr_sb');
   } catch(e) {}
+  // Hapus cookie session juga
+  try {
+    document.cookie=`${SESSION_KEY}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/applaras/;SameSite=Lax`;
+  } catch(e) {}
   G('app').style.display='none';
   G('btn-add').classList.add('hidden');
   G('dtl-edit').classList.add('hidden');
@@ -218,9 +224,19 @@ function doLogout() {
 async function initVO() {
   const n=new Date(); calY=n.getFullYear(); calM=n.getMonth();
 
-  // Cek session tersimpan — kalau ada, langsung masuk tanpa login ulang
+  // Cek session tersimpan — coba localStorage dulu, fallback ke cookie
   try {
-    const saved = localStorage.getItem(SESSION_KEY);
+    let saved = localStorage.getItem(SESSION_KEY);
+    // Kalau localStorage kosong, coba baca dari cookie (fallback PWA)
+    if (!saved) {
+      const match = document.cookie.split(';').map(c=>c.trim())
+        .find(c=>c.startsWith(SESSION_KEY+'='));
+      if (match) {
+        saved = decodeURIComponent(match.split('=').slice(1).join('='));
+        // Restore ke localStorage sekalian
+        try { localStorage.setItem(SESSION_KEY, saved); } catch(e) {}
+      }
+    }
     if (saved) {
       const sess = JSON.parse(saved);
       curUser=sess.nama||''; curRole=sess.role||'viewonly';
@@ -229,7 +245,7 @@ async function initVO() {
       G('login').style.display='none'; G('vo').style.display='none'; G('app').style.display='flex';
       mode='loggedin'; tab='nama';
       initApp();
-      return; // stop, tidak perlu lanjut ke view-only
+      return;
     }
   } catch(e) {}
 
