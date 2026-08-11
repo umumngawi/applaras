@@ -17,10 +17,13 @@ const BAG_LBL = {
 const SEP = ' ; ';
 
 let events=[], stafU=[], stafB=[], tab='nama', filt=null, editId=null, calY, calM;
-let curUser='', curRole='', curBag='';
+let curUser='', curRole='', curBag='', curNama='';
 let selStaf=[], selDisp=[], dd1Open=false, dd2Open=false, pendFiles=[];
 let mode='viewonly';
 let renderPending=false;
+
+// ── SESSION KEY ──
+const SESSION_KEY = 'lr_session';
 
 // ── UTILS ──
 const G    = id => document.getElementById(id);
@@ -157,7 +160,13 @@ async function doLogin() {
   const res = await gas({ action:'login', username:user, password:pass });
   btn.textContent='Masuk'; btn.disabled=false;
   if (res.success) {
-    curUser=res.nama; curRole=res.role||'viewonly'; curBag=res.bagian||'';
+    curUser=res.nama; curRole=res.role||'viewonly'; curBag=res.bagian||''; curNama=res.nama||'';
+    // Simpan session ke localStorage agar tidak logout saat app ditutup
+    try {
+      localStorage.setItem(SESSION_KEY, JSON.stringify({
+        nama: curUser, role: curRole, bagian: curBag, nama_lengkap: curNama
+      }));
+    } catch(e) {}
     applyRole();
     G('login').style.display='none'; G('vo').style.display='none'; G('app').style.display='flex';
     mode='loggedin'; tab='nama';
@@ -168,19 +177,36 @@ async function doLogin() {
 }
 
 function applyRole() {
-  const lbl = { owner:'Owner', admin:'Admin', viewonly:'View Only' };
-  G('user-welcome').innerHTML=`${esc(curUser)}&nbsp;<span class="role-badge ${curRole}">${lbl[curRole]||curRole}</span>`;
-  if (curRole!=='viewonly') { G('btn-add').classList.remove('hidden'); G('dtl-edit').classList.remove('hidden'); }
+  const lbl = { owner:'Owner', admin:'Admin', viewonly:'View Only', staff:'Staff' };
+  // curRole 'staff' pakai class CSS 'viewonly' supaya warnanya netral
+  const badgeClass = curRole==='staff' ? 'viewonly' : curRole;
+  G('user-welcome').innerHTML=`${esc(curUser)}&nbsp;<span class="role-badge ${badgeClass}">${lbl[curRole]||curRole}</span>`;
+  // owner & admin bisa tambah/edit agenda
+  if (curRole==='owner'||curRole==='admin') {
+    G('btn-add').classList.remove('hidden');
+    G('dtl-edit').classList.remove('hidden');
+  }
+  // notif hanya owner & admin
   if (curRole==='owner'||curRole==='admin') G('btn-notif').style.display='flex';
+  // staff & viewonly: sembunyikan tab settings
+  if (curRole==='staff'||curRole==='viewonly') {
+    const stgTab = G('t-stg'); if (stgTab) stgTab.style.display='none';
+  }
 }
 
 function doLogout() {
-  curUser=''; curRole=''; curBag=''; stafU=[]; stafB=[];
-  try { localStorage.removeItem('lr_su'); localStorage.removeItem('lr_sb'); } catch(e) {}
+  curUser=''; curRole=''; curBag=''; curNama=''; stafU=[]; stafB=[];
+  try {
+    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem('lr_su');
+    localStorage.removeItem('lr_sb');
+  } catch(e) {}
   G('app').style.display='none';
   G('btn-add').classList.add('hidden');
   G('dtl-edit').classList.add('hidden');
   G('btn-notif').style.display='none';
+  // Tampilkan kembali tab settings kalau sebelumnya disembunyikan
+  const stgTab = G('t-stg'); if (stgTab) stgTab.style.display='';
   mode='viewonly'; tab='nama'; filt=null;
   G('vo').style.display='flex';
   G('l-user').value=''; G('l-pass').value=''; G('l-err').style.display='none';
@@ -190,9 +216,26 @@ function doLogout() {
 
 // ── INIT ──
 async function initVO() {
+  const n=new Date(); calY=n.getFullYear(); calM=n.getMonth();
+
+  // Cek session tersimpan — kalau ada, langsung masuk tanpa login ulang
+  try {
+    const saved = localStorage.getItem(SESSION_KEY);
+    if (saved) {
+      const sess = JSON.parse(saved);
+      curUser=sess.nama||''; curRole=sess.role||'viewonly';
+      curBag=sess.bagian||''; curNama=sess.nama_lengkap||sess.nama||'';
+      applyRole();
+      G('login').style.display='none'; G('vo').style.display='none'; G('app').style.display='flex';
+      mode='loggedin'; tab='nama';
+      initApp();
+      return; // stop, tidak perlu lanjut ke view-only
+    }
+  } catch(e) {}
+
+  // Tidak ada session → tampil view-only seperti biasa
   mode='viewonly';
   G('login').style.display='none'; G('vo').style.display='flex'; G('app').style.display='none';
-  const n=new Date(); calY=n.getFullYear(); calM=n.getMonth();
   try { const c=localStorage.getItem('lr_ev'); if(c) events=JSON.parse(c); } catch(e) {}
   if (events.length) render(); else showLdr('Memuat agenda...');
   const res = await gas({ action:'getEvents' });
@@ -211,16 +254,18 @@ async function initApp() {
   } catch(e) {}
   if (events.length||stafU.length) { render(); toast('Menyinkronkan data...'); }
   else showLdr('Mengambil data...');
+  // Staff hanya butuh events, tidak perlu data staf/bagian
   const bags = curRole==='owner' ? BAGS : (curBag?[curBag]:[]);
-  const [evRes, suRes, ...bagRes] = await Promise.all([
-    gas({ action:'getEvents' }),
-    gas({ action:'getStaf', sheet:'staf' }),
-    ...bags.map(b=>gas({ action:'getStaf', sheet:b }))
-  ]);
+  const requests = [gas({ action:'getEvents' })];
+  if (curRole!=='staff') {
+    requests.push(gas({ action:'getStaf', sheet:'staf' }));
+    bags.forEach(b=>requests.push(gas({ action:'getStaf', sheet:b })));
+  }
+  const [evRes, suRes, ...bagRes] = await Promise.all(requests);
   if (evRes.success && evRes.data) events=evRes.data;
-  if (suRes.success && suRes.data) stafU=suRes.data;
+  if (suRes && suRes.success && suRes.data) stafU=suRes.data;
   stafB=[];
-  bagRes.forEach((r,i)=>{ if(r.success&&r.data) r.data.forEach(x=>{ x._bag=bags[i]; stafB.push(x); }); });
+  bagRes.forEach((r,i)=>{ if(r&&r.success&&r.data) r.data.forEach(x=>{ x._bag=bags[i]; stafB.push(x); }); });
   saveCache(); hideLdr(); render();
   cleanNotifKeys();
   setTimeout(checkNotifs,800);
@@ -253,6 +298,11 @@ function getFiltered(forCal) {
   const q=getQ();
   return events.filter(e=>{
     if (!forCal && !upcoming(e)) return false;
+    // Role staff: hanya tampilkan agenda milik dia sendiri
+    if (curRole==='staff' && curNama) {
+      const names = e.name.split(SEP).map(x=>x.trim());
+      if (!names.includes(curNama)) return false;
+    }
     const mQ=!q||(e.title+(e.body||'')+(e.name||'')+(e.catatan||'')+(e.disposisi||'')).toLowerCase().includes(q);
     const mF=!filt||e.name.split(SEP).map(x=>x.trim()).includes(filt);
     return mQ && mF;
