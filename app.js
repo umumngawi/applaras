@@ -741,10 +741,31 @@ document.addEventListener('DOMContentLoaded',()=>{
     if (tab==='kalender') resizeTimer=setTimeout(()=>render(),200);
   });
 
-  // Register Service Worker (PWA)
+  // Register Service Worker (PWA) + Auto Update
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js')
-      .catch(err => console.warn('SW registration failed:', err));
+    navigator.serviceWorker.register('./sw.js').then(reg => {
+
+      // Cek update setiap kali app dibuka
+      reg.update();
+
+      // Kalau ada service worker baru menunggu, langsung aktifkan
+      reg.addEventListener('updatefound', () => {
+        const newSW = reg.installing;
+        newSW.addEventListener('statechange', () => {
+          if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
+            // Ada versi baru — kirim pesan ke SW lama untuk skip waiting
+            newSW.postMessage('skipWaiting');
+          }
+        });
+      });
+
+    }).catch(err => console.warn('SW registration failed:', err));
+
+    // Reload halaman saat SW baru sudah aktif (dapat versi terbaru)
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!refreshing) { refreshing = true; window.location.reload(); }
+    });
   }
 
   initVO();
