@@ -61,6 +61,13 @@ function upcoming(e) {
   return de >= td;
 }
 
+// ── UTILS: normalisasi nama untuk matching ──
+// Hapus spasi berlebih, titik ganda, uppercase semua
+// supaya "SUYANTO, S.H., M.M" == "SUYANTO, S.H.,M.M"
+function normName(n) {
+  return (n||'').toUpperCase().replace(/\s+/g,' ').replace(/\.\s*/g,'.').trim();
+}
+
 // ── LOADER ──
 function showLdr(msg='Memuat...') { G('ldr-txt').textContent=msg; G('ldr').classList.add('on'); }
 function hideLdr()                { G('ldr').classList.remove('on'); }
@@ -322,8 +329,8 @@ function getFiltered(forCal) {
     if (!forCal && !upcoming(e)) return false;
     // Role staff: hanya tampilkan agenda milik dia sendiri
     if (curRole==='staff' && curNama) {
-      const names = e.name.split(SEP).map(x=>x.trim());
-      if (!names.includes(curNama)) return false;
+      const names = e.name.split(SEP).map(x=>normName(x));
+      if (!names.includes(normName(curNama))) return false;
     }
     const mQ=!q||(e.title+(e.body||'')+(e.name||'')+(e.catatan||'')+(e.disposisi||'')).toLowerCase().includes(q);
     const mF=!filt||e.name.split(SEP).map(x=>x.trim()).includes(filt);
@@ -412,7 +419,7 @@ function noteCardHTML(e) {
   const attLine=atts.length?`<div class="note-att">📎 ${atts.length} lampiran</div>`:'';
   const jam=e.timeStart?`<div class="note-time">🕐 ${fmtTime(e.timeStart)}${e.timeEnd?' – '+fmtTime(e.timeEnd):' s.d. selesai'}</div>`:'';
   const body=e.body?`<div class="note-body">${esc(e.body)}</div>`:'';
-  const canEdit=curRole!=='viewonly' && mode==='loggedin';
+  const canEdit=(curRole==='owner'||curRole==='admin') && mode==='loggedin';
   const foot=canEdit?`<div class="note-foot"><div class="note-acts"><button data-act="edit">✏️</button><button data-act="del">🗑️</button></div></div>`:'';
   return `<div class="note" data-c="${ci}" data-id="${e.id}">${rb}<div class="note-staf">${esc(names.join(' · '))}</div><div class="note-title">${esc(e.title)}</div><div class="note-date">📅 ${fmtRange(ds,de)}</div>${jam}${khBadge}${disp}${body}${cat}${attLine}${foot}</div>`;
 }
@@ -540,7 +547,7 @@ function openDetail(id) {
     G('dtl-att-sec').style.display='block';
     G('dtl-att-list').innerHTML=atts.map(a=>`<a class="dtl-att" href="https://drive.google.com/file/d/${a.driveId}/view" target="_blank" rel="noopener"><span style="font-size:16px">${fIco(a.type||'')}</span><span class="dtl-att-name">${esc(a.name)}</span><span class="dtl-att-sz">${a.size?fmtSz(a.size):''}</span></a>`).join('');
   } else G('dtl-att-sec').style.display='none';
-  if (mode==='loggedin' && curRole!=='viewonly') {
+  if (mode==='loggedin' && (curRole==='owner'||curRole==='admin')) {
     G('dtl-edit').classList.remove('hidden');
     G('dtl-edit').onclick=()=>{ closeDtl(); openModal(id); };
   } else G('dtl-edit').classList.add('hidden');
