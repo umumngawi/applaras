@@ -354,7 +354,16 @@ function render() {
 function renderNama(el) {
   const f=getFiltered(false);
   const nameSet=new Set();
-  events.filter(upcoming).forEach(e=>e.name.split(SEP).map(x=>x.trim()).forEach(n=>nameSet.add(n)));
+  events.filter(upcoming).forEach(e=>{
+    e.name.split(SEP).map(x=>x.trim()).forEach(n=>{
+      // Role staff: hanya tampilkan chip nama sendiri
+      if (curRole==='staff' && curNama) {
+        if (normName(n)===normName(curNama)) nameSet.add(n);
+      } else {
+        nameSet.add(n);
+      }
+    });
+  });
 
   let html=`<div class="mob-srch"><input type="text" id="mob-s" placeholder="🔍  Cari agenda..." oninput="debouncedRender()"></div>`;
   html+=`<div class="fbar"><span class="fbar-lbl">Filter</span>`;
