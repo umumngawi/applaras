@@ -5,12 +5,20 @@
    hanya untuk font.
 ───────────────────────────────────────────── */
 
-const CACHE_NAME = 'laras-v2';
+// Ganti angka versi ini setiap kali ada update kode
+// PWA akan otomatis update di background saat user buka app
+const CACHE_VERSION = '20260813';
+const CACHE_NAME = 'laras-' + CACHE_VERSION;
 
 // ── INSTALL ──
 self.addEventListener('install', event => {
   // Langsung aktif tanpa tunggu tab lama ditutup
   self.skipWaiting();
+});
+
+// ── MESSAGE: force update dari app ──
+self.addEventListener('message', event => {
+  if (event.data === 'skipWaiting') self.skipWaiting();
 });
 
 // ── ACTIVATE: hapus cache lama ──
